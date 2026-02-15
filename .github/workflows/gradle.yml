@@ -1,21 +1,17 @@
-# This workflow will build a Java project with Gradle
-# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-gradle
-
 name: fullBuild
 
 on:
   push:
     paths-ignore:
-    - '**/README.md'
-    - '**/Mekanism.txt'
+      - '**/README.md'
+      - '**/Mekanism.txt'
   schedule:
     - cron: '0 12 1 * *'
+  workflow_dispatch:  # 添加手动触发按钮
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v2
       - name: Set up JDK 8
@@ -33,3 +29,22 @@ jobs:
           MAVEN_PASSWORD: ${{ secrets.MAVEN_TOKEN }}
           MAVEN_REPO: ${{ secrets.MAVEN_DEVREPO }}
           BUILD_VER: ${{ github.run_number }}
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.run_number }}
+          release_name: Release ${{ github.run_number }}
+          draft: false
+          prerelease: false
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./build/libs/*.jar  # 请根据实际构建产物路径调整
+          asset_name: project-${{ github.run_number }}.jar
+          asset_content_type: application/java-archive
