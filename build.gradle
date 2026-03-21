@@ -1,16 +1,13 @@
 buildscript {
     repositories {
+        // 保持原有仓库，不添加 GTNH 到 buildscript
         maven {
             name = "central"
             url = "https://maven.thorfusion.com/artifactory/central/"
         }
-        // ============ 新增：添加 GTNH Maven 获取 Java 17 兼容依赖 ============
+        // 添加 Forge Maven 作为备用
         maven {
-            name = "GTNH Maven"
-            url = "https://maven.gtnewhorizons.com/repository/public/"
-        }
-        maven {
-            name = "MinecraftForge"
+            name = "forge"
             url = "https://maven.minecraftforge.net/"
         }
         mavenCentral()
@@ -20,15 +17,13 @@ buildscript {
             changing = true
         }
         classpath "org.jfrog.buildinfo:build-info-extractor-gradle:4.33.1"
-        // ============ 新增：Java 版本检测插件 ============
-        classpath 'org.gradle.toolchains:foojay-resolver-convention:0.7.0'
+        // 移除 foojay 插件依赖
     }
 }
 
 plugins {
     id 'java-library'
-    // ============ 新增：工具链解析器 ============
-    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.7.0' apply false
+    // 移除 foojay 插件
 }
 
 apply plugin: 'forge'
@@ -44,14 +39,12 @@ repositories {
         name 'central'
         url 'https://maven.thorfusion.com/artifactory/central/'
     }
-    // ============ 新增：添加更多仓库 ============
+    // 主项目可以添加 GTNH 仓库（可选）
     maven {
         name 'GTNH Maven'
-        url 'https://maven.gtnewhorizons.com/repository/public/'
-    }
-    maven {
-        name 'CurseMaven'
-        url 'https://www.cursemaven.com/'
+        url = "https://maven.gtnewhorizons.com/repository/public/"
+        // 如果连接失败，可以注释掉这行
+        // content { includeGroup 'com.github.GTNewHorizons' }
     }
     mavenCentral()
 }
@@ -62,27 +55,21 @@ idea {
     }
 }
 
-// ============ 新增：Java 工具链配置（关键） ============
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(8)
-    }
-}
+// ============ 关键：Java 8 兼容性配置 ============
+sourceCompatibility = '1.8'
+targetCompatibility = '1.8'
 
-// ============ 新增：确保编译为 Java 8 字节码 ============
+// 确保编译选项正确
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
-    options.release = 8  // 强制生成 Java 8 字节码
-    
-    // ============ 新增：禁用 Java 17+ 的警告 ============
-    options.compilerArgs += [
-        '-Xlint:-options',  // 禁用 release 警告
-        '-Xlint:-unchecked'
-    ]
+    // 不使用 release 选项（ForgeGradle 1.2 可能不兼容）
+    options.source = '1.8'
+    options.target = '1.8'
 }
 
 dependencies {
-    // ============ 新增：ASM 9 支持 Java 17 字节码 ============
+    // ============ 新增：ASM 9 支持 Java 17+ ============
+    // 这些会在运行时使用，不影响编译
     implementation 'org.ow2.asm:asm:9.7'
     implementation 'org.ow2.asm:asm-tree:9.7'
     implementation 'org.ow2.asm:asm-commons:9.7'
@@ -96,10 +83,6 @@ dependencies {
     implementation "inventorytweaks:inventory-tweaks:1.7.10-1.60.0:api"
     implementation "net.industrial-craft:industrialcraft-2:2.2.828-experimental:api"
     implementation "mcp.mobius.waila:Waila:1.5.10_1.7.10:dev"
-    
-    // ============ 新增：可选的 Java 17 兼容性依赖 ============
-    // 如果需要使用 lwjgl3ify 的兼容性类
-    // compileOnly 'com.github.GTNewHorizons:lwjgl3ify:3.0.15:dev'
 }
 
 if (System.getenv("BUILD_VER") == null) {
@@ -113,10 +96,6 @@ archivesBaseName = "Mekanism-Community-Edition"
 libsDirName = "../output"
 distsDirName = "../output"
 
-// ============ 修改：保持 Java 8 兼容性 ============
-sourceCompatibility = '1.8'
-targetCompatibility = '1.8'
-
 minecraft {
     version = minecraft_version + "-" + forge_version
     replaceIn "mekanism/common/Mekanism.java"
@@ -126,9 +105,6 @@ minecraft {
     replaceIn "mekanism/ultimate/common/MekanismUltimate.java"
     replace "GRADLE_MODVERSION", mod_version
     replace "GRADLE_VERSIONMOD", alt_version
-    
-    // ============ 新增：确保 srg 映射正确 ============
-    srgExtra "PK: mekanism/common/asm mekanism/common/asm"
 }
 
 processResources {
@@ -139,17 +115,15 @@ processResources {
     }
 }
 
-// ============ 修改：所有 JAR 任务添加 ASM 兼容性声明 ============
+// ============ 所有 JAR 任务添加 Java 17 兼容性声明 ============
 task coreJar(type: Jar) {
     classifier = 'Core'
     manifest {
         attributes 'FMLCorePlugin': 'mekanism.common.asm.LoadingHook'
         attributes 'FMLCorePluginContainsFMLMod': 'true'
-        // ============ 新增：Java 17 兼容性声明 ============
         attributes 'ForceLoadAsMod': 'true'
         attributes 'TweakClass': 'mekanism.common.asm.LoadingHook'
         attributes 'TweakOrder': '0'
-        attributes 'ASMCompatibility': '9'
     }
 
     from('etc/core') {
@@ -167,11 +141,9 @@ task alltJar(type: Jar) {
     manifest {
         attributes 'FMLCorePlugin': 'mekanism.common.asm.LoadingHook'
         attributes 'FMLCorePluginContainsFMLMod': 'true'
-        // ============ 新增 ============
         attributes 'ForceLoadAsMod': 'true'
         attributes 'TweakClass': 'mekanism.common.asm.LoadingHook'
         attributes 'TweakOrder': '0'
-        attributes 'ASMCompatibility': '9'
     }
     from('etc/all') {
         include '*.info'
@@ -234,7 +206,6 @@ task ultimateJar(type: Jar) {
     }
 }
 
-// ============ 修改：devJar 也添加兼容性声明 ============
 task devJar(type: Jar) {
     classifier = 'DEV'
     dependsOn processResources
@@ -245,7 +216,6 @@ task devJar(type: Jar) {
         attributes 'ForceLoadAsMod': 'true'
         attributes 'TweakClass': 'mekanism.common.asm.LoadingHook'
         attributes 'TweakOrder': '0'
-        attributes 'ASMCompatibility': '9'
     }
     from('etc/all') {
         include '*.info'
@@ -282,19 +252,6 @@ task fullBuild(type: Delete) {
 }
 
 fullBuild.dependsOn('toolsJar', 'coreJar', 'generatorsJar', 'MDKZip', 'alltJar', 'apiJar', 'devJar','defensetechJar', 'ultimateJar')
-
-// ============ 新增：创建启动脚本生成任务 ============
-task generateLaunchScript(type: Copy) {
-    dependsOn fullBuild
-    from fileTree(dir: 'etc/launch', includes: ['*.bat', '*.sh'])
-    into file('output/')
-    expand(
-        javaPath: 'java',
-        addOpens: '--add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED'
-    )
-}
-
-fullBuild.dependsOn('generateLaunchScript')
 
 artifactory {
     contextUrl = System.getenv("MAVEN_URL")
@@ -345,15 +302,6 @@ publishing {
                         name.set('EUPL-1.2')
                         distribution.set('repo')
                     }
-                }
-                // ============ 新增：Java 兼容性信息 ============
-                withXml {
-                    def dependenciesNode = asNode().appendNode('dependencies')
-                    def asmDep = dependenciesNode.appendNode('dependency')
-                    asmDep.appendNode('groupId', 'org.ow2.asm')
-                    asmDep.appendNode('artifactId', 'asm')
-                    asmDep.appendNode('version', '9.7')
-                    asmDep.appendNode('scope', 'compile')
                 }
             }
         }
