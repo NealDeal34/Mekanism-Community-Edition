@@ -69,7 +69,6 @@ import mekanism.common.security.SecurityFrequency;
 import mekanism.common.tile.TileEntityAdvancedBoundingBlock;
 import mekanism.common.tile.TileEntityBoundingBlock;
 import mekanism.common.tile.TileEntityCardboardBox;
-import mekanism.common.tile.TileEntityElectricBlock;
 import mekanism.common.tile.TileEntityPressureDisperser;
 import mekanism.common.tile.TileEntitySuperheatingElement;
 import mekanism.common.tile.TileEntityThermalEvaporationBlock;
@@ -364,7 +363,7 @@ public class Mekanism
 
 		if (MekanismConfig.recipes.enableTeleporterCore) {
 			CraftingManager.getInstance().getRecipeList().add(new ShapedMekanismRecipe(new ItemStack(MekanismItems.TeleportationCore), new Object[]{
-					"LAL", "GDG", "LAL", Character.valueOf('L'), new ItemStack(Items.dye, 1, 4), Character.valueOf('A'), MekanismItems.AtomicAlloy, Character.valueOf('G'), "ingotGold", Character.valueOf('D'), Items.diamond
+					"LAL", "GDG", "LAL", Character.valueOf('L'), Items.ender_pearl, Character.valueOf('A'), MekanismItems.AtomicAlloy, Character.valueOf('G'), "ingotGold", Character.valueOf('D'), Items.diamond
 			}));
 		}
 
@@ -1489,9 +1488,6 @@ public class Mekanism
 		//Initialization notification
 		logger.info("Version " + versionNumber + " initializing...");
 
-		//Get data from server
-		new ThreadGetData();
-
 		//Register with ForgeChunkManager
 		ForgeChunkManager.setForcedChunkLoadingCallback(this, new ChunkManager());
 
@@ -1657,9 +1653,7 @@ public class Mekanism
 			HashMap<ChunkPosition, TileEntity> chunkData = new HashMap<ChunkPosition, TileEntity>(event.getChunk().chunkTileEntityMap);
 
 			for (TileEntity tileEntity : chunkData.values()) {
-				if (tileEntity instanceof TileEntityElectricBlock && MekanismUtils.useIC2()) {
-					((TileEntityElectricBlock) tileEntity).register();
-				} else if (tileEntity instanceof IChunkLoadHandler) {
+				if (tileEntity instanceof IChunkLoadHandler) {
 					((IChunkLoadHandler) tileEntity).onChunkLoad();
 				}
 			}
