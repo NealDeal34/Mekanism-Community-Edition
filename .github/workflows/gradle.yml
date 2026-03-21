@@ -7,15 +7,15 @@ on:
       - '**/Mekanism.txt'
   schedule:
     - cron: '0 12 1 * *'
-  workflow_dispatch:  # 添加手动触发按钮
+  workflow_dispatch:  # 手动触发按钮
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4  # 升级到 v4
       - name: Set up JDK 8
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4  # 升级到 v4
         with:
           java-version: '8'
           distribution: 'adopt'
@@ -29,9 +29,18 @@ jobs:
           MAVEN_PASSWORD: ${{ secrets.MAVEN_TOKEN }}
           MAVEN_REPO: ${{ secrets.MAVEN_DEVREPO }}
           BUILD_VER: ${{ github.run_number }}
+      
+      # 调试步骤 - 确认 jar 文件位置（可选，验证通过后删除）
+      - name: Debug - List jar files
+        run: |
+          echo "=== output 目录 ==="
+          ls -la ./output/ || echo "output 目录不存在"
+          echo "=== build/libs 目录 ==="
+          ls -la ./build/libs/ || echo "build/libs 目录不存在"
+      
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v1  # 更现代的替代方案
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -39,12 +48,12 @@ jobs:
           release_name: Release ${{ github.run_number }}
           draft: false
           prerelease: false
+      
       - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
+        uses: softprops/action-gh-release@v1  # 与 create-release 使用同一行动
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./build/libs/*.jar  # 请根据实际构建产物路径调整
-          asset_name: project-${{ github.run_number }}.jar
-          asset_content_type: application/java-archive
+          tag_name: v${{ github.run_number }}
+          files: |  # 支持上传多个文件
+            ./output/*.jar
