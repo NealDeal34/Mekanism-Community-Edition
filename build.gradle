@@ -1,11 +1,9 @@
 buildscript {
     repositories {
-        // 保持原有仓库，不添加 GTNH 到 buildscript
         maven {
             name = "central"
             url = "https://maven.thorfusion.com/artifactory/central/"
         }
-        // 添加 Forge Maven 作为备用
         maven {
             name = "forge"
             url = "https://maven.minecraftforge.net/"
@@ -17,13 +15,11 @@ buildscript {
             changing = true
         }
         classpath "org.jfrog.buildinfo:build-info-extractor-gradle:4.33.1"
-        // 移除 foojay 插件依赖
     }
 }
 
 plugins {
     id 'java-library'
-    // 移除 foojay 插件
 }
 
 apply plugin: 'forge'
@@ -39,13 +35,6 @@ repositories {
         name 'central'
         url 'https://maven.thorfusion.com/artifactory/central/'
     }
-    // 主项目可以添加 GTNH 仓库（可选）
-    maven {
-        name 'GTNH Maven'
-        url = "https://maven.gtnewhorizons.com/repository/public/"
-        // 如果连接失败，可以注释掉这行
-        // content { includeGroup 'com.github.GTNewHorizons' }
-    }
     mavenCentral()
 }
 
@@ -55,21 +44,18 @@ idea {
     }
 }
 
-// ============ 关键：Java 8 兼容性配置 ============
+// ============ 修复：使用兼容的 Java 配置方式 ============
 sourceCompatibility = '1.8'
 targetCompatibility = '1.8'
 
-// 确保编译选项正确
-tasks.withType(JavaCompile).configureEach {
+// 使用 configure 而不是 configureEach (ForgeGradle 1.2 兼容)
+tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
-    // 不使用 release 选项（ForgeGradle 1.2 可能不兼容）
-    options.source = '1.8'
-    options.target = '1.8'
+    // 不使用 options.source/target，改用 sourceCompatibility/targetCompatibility
 }
 
 dependencies {
-    // ============ 新增：ASM 9 支持 Java 17+ ============
-    // 这些会在运行时使用，不影响编译
+    // ============ ASM 9 支持 Java 17+ ============
     implementation 'org.ow2.asm:asm:9.7'
     implementation 'org.ow2.asm:asm-tree:9.7'
     implementation 'org.ow2.asm:asm-commons:9.7'
@@ -115,7 +101,6 @@ processResources {
     }
 }
 
-// ============ 所有 JAR 任务添加 Java 17 兼容性声明 ============
 task coreJar(type: Jar) {
     classifier = 'Core'
     manifest {
