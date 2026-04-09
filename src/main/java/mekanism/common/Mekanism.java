@@ -1395,6 +1395,9 @@ public class Mekanism
 	@EventHandler
 	public void preInit(FMLPreInitializationEvent event)
 	{
+		System.setProperty("sun.net.client.defaultConnectTimeout", "800");
+    	System.setProperty("sun.net.client.defaultReadTimeout", "800");
+    	System.setProperty("http.keepAlive", "false");
 		//Set the mod's configuration
 		configuration = new Configuration(new File("config/mekanism/Mekanism.cfg"));
 		configurationgenerators = new Configuration(new File("config/mekanism/MekanismGenerators.cfg"));
